@@ -207,6 +207,44 @@ code {
   padding: 0.08em 0.35em;
 }
 
+/* ── Code blocks ──────────────────────────────────────────────── */
+.snippet { margin: 1.4rem 0; }
+.snippet .snippet-label {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+pre.codeblock {
+  background: #0f1620;
+  color: #e6edf3;
+  border: 1px solid #1f2a36;
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  margin: 0;
+  overflow-x: auto;
+  line-height: 1.55;
+}
+pre.codeblock code {
+  font-family: "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  white-space: pre;
+}
+pre.codeblock .cmt { color: #7d8a99; font-style: italic; }
+.snippet .snippet-src {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+}
+
 /* ── Tables ───────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; margin: 1.4rem 0; }
 table {

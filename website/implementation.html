@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Implementation — EMA Crossover Study</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">EMA Crossover Study</a>
+      <a href="index.html" class="nav-link">Abstract</a>
+      <a href="methodology.html" class="nav-link">Methodology</a>
+      <a href="results.html" class="nav-link">Results</a>
+      <a href="sensitivity.html" class="nav-link">Sensitivity</a>
+      <a href="conclusion.html" class="nav-link">Conclusion</a>
+      <a href="implementation.html" class="nav-link active">Implementation</a>
+      <a href="https://github.com/AlienatedParanoia/ema-crossover-backtest" class="nav-link" target="_blank" rel="noopener">Source &#8599;</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="pagehead">
+      <p class="eyebrow">Appendix A</p>
+      <h1>Implementation &amp; code</h1>
+    </div>
+
+    <p>This appendix shows the core of the implementation behind the results, and documents how
+      the study was actually run end-to-end. The full source — eight modules plus the standalone
+      single-file version — lives in the repository:
+      <a href="https://github.com/AlienatedParanoia/ema-crossover-backtest" target="_blank" rel="noopener">github.com/AlienatedParanoia/ema-crossover-backtest</a>.
+      The snippets below are lightly condensed for readability; the canonical versions are in
+      <code>project/</code>.</p>
+
+    <h2><span class="section-num">A.1</span>Project structure</h2>
+    <p>The pipeline is deliberately modular so each stage can be audited on its own.</p>
+    <div class="snippet">
+      <span class="snippet-label">Repository layout</span>
+      <pre class="codeblock"><code>project/
+&#9500;&#9472;&#9472; config.py          <span class="cmt"># parameters (tickers, dates, EMA windows, costs)</span>
+&#9500;&#9472;&#9472; data.py            <span class="cmt"># download, clean, train/test split (+ local cache)</span>
+&#9500;&#9472;&#9472; signals.py         <span class="cmt"># EMA computation + crossover signals</span>
+&#9500;&#9472;&#9472; backtest.py        <span class="cmt"># EMA strategy &amp; buy-and-hold simulation</span>
+&#9500;&#9472;&#9472; metrics.py         <span class="cmt"># Sharpe, max drawdown, total return</span>
+&#9500;&#9472;&#9472; sensitivity.py     <span class="cmt"># parameter-grid robustness sweep</span>
+&#9500;&#9472;&#9472; visualisations.py  <span class="cmt"># equity-curve, signal, heatmap charts</span>
+&#9492;&#9472;&#9472; main.py            <span class="cmt"># end-to-end orchestration</span></code></pre>
+    </div>
+
+    <h2><span class="section-num">A.2</span>Configuration</h2>
+    <p>Every tunable lives in one place, so a single edit propagates through the whole study.</p>
+    <div class="snippet">
+      <span class="snippet-label">config.py</span>
+      <pre class="codeblock"><code>TICKERS    = ["SHEL.L", "AZN.L", "HSBA.L", "TSCO.L", "BA.L"]
+START_DATE = "2019-01-01"
+END_DATE   = "2024-12-31"
+SPLIT_DATE = "2022-07-01"          <span class="cmt"># train / test boundary</span>
+
+SHORT_EMA  = 20                    <span class="cmt"># fast EMA window (days)</span>
+LONG_EMA   = 50                    <span class="cmt"># slow EMA window (days)</span>
+
+TRANSACTION_COST = 0.001           <span class="cmt"># 0.1% per trade</span>
+RISK_FREE_RATE   = 0.025           <span class="cmt"># 2.5% annualised</span>
+STARTING_CAPITAL = 10_000          <span class="cmt"># GBP</span></code></pre>
+    </div>
+
+    <h2><span class="section-num">A.3</span>EMA &amp; signal generation</h2>
+    <p>Two design choices matter here: <code>adjust=False</code> gives the standard recursive
+      EMA used on professional platforms, and <code>.shift(1)</code> defers every trade to the
+      next day so the backtest can never act on a same-day crossover (no look-ahead bias).</p>
+    <div class="snippet">
+      <span class="snippet-label">signals.py</span>
+      <pre class="codeblock"><code>def compute_emas(price, short_window, long_window):
+    short_ema = price.ewm(span=short_window, adjust=False).mean()
+    long_ema  = price.ewm(span=long_window,  adjust=False).mean()
+    return short_ema, long_ema
+
+def generate_signals(price, short_window, long_window):
+    short_ema, long_ema = compute_emas(price, short_window, long_window)
+    raw    = (short_ema &gt; long_ema).astype(int) * 2 - 1   <span class="cmt"># +1 long, -1 flat</span>
+    signal = raw.shift(1)                                  <span class="cmt"># trade next day -> no look-ahead</span>
+    signal.iloc[0] = 0
+    return signal</code></pre>
+    </div>
+
+    <h2><span class="section-num">A.4</span>Backtest engine</h2>
+    <p>A two-state machine: fully invested on a long signal, fully in cash otherwise. A 0.1%
+      cost is charged on every entry and exit. Daily portfolio value is marked to market.</p>
+    <div class="snippet">
+      <span class="snippet-label">backtest.py — run_ema_strategy</span>
+      <pre class="codeblock"><code>def run_ema_strategy(price, signals, starting_capital, transaction_cost):
+    signals = signals.reindex(price.index).fillna(0)
+    values  = pd.Series(index=price.index, dtype=float)
+    capital, position, prev = starting_capital, 0, 0
+
+    for date, px in price.items():
+        sig = signals.loc[date]
+        if sig != prev:
+            if prev == 1 and position &gt; 0:        <span class="cmt"># exit -> move to cash</span>
+                proceeds = position * px
+                capital  = proceeds - proceeds * transaction_cost
+                position = 0
+            if sig == 1:                            <span class="cmt"># enter -> buy with all cash</span>
+                capital -= capital * transaction_cost
+                position = capital / px
+                capital  = 0
+            prev = sig
+        values.loc[date] = position * px if position &gt; 0 else capital
+    return values</code></pre>
+    </div>
+
+    <h2><span class="section-num">A.5</span>Performance metrics</h2>
+    <div class="snippet">
+      <span class="snippet-label">metrics.py</span>
+      <pre class="codeblock"><code>def sharpe_ratio(values, risk_free_rate):
+    rets   = values.pct_change().dropna()
+    excess = rets - risk_free_rate / 252
+    std    = rets.std()
+    return 0.0 if std == 0 else (excess.mean() / std) * np.sqrt(252)
+
+def max_drawdown(values):
+    peak = values.cummax()
+    return float(((values - peak) / peak).min())</code></pre>
+    </div>
+
+    <h2><span class="section-num">A.6</span>How the study was run</h2>
+    <p><code>main.py</code> orchestrates the whole pipeline: fetch &rarr; clean &rarr;
+      train/test split &rarr; generate signals on the full history (for EMA warm-up) &rarr; slice
+      to the test period &rarr; run the EMA strategy and buy-and-hold &rarr; compute metrics
+      &rarr; render charts &rarr; sweep the sensitivity grid.</p>
+
+    <h3>Data acquisition &amp; the rate-limit workaround</h3>
+    <p>Pulling six years of daily data for five tickers tripped Yahoo Finance's rate limiter
+      (<code>Too Many Requests</code>), and ordinary retries only kept the block alive. The fix
+      was to route <code>yfinance</code> through a <code>curl_cffi</code> session that
+      impersonates Chrome — Yahoo's throttling is largely TLS-fingerprint based, so a
+      browser-like handshake sails through. The result is cached to
+      <code>data_cache/prices.csv</code> so subsequent runs are fully offline.</p>
+    <div class="snippet">
+      <span class="snippet-label">Data fetch (rate-limit workaround)</span>
+      <pre class="codeblock"><code><span class="cmt"># pip install curl_cffi</span>
+from curl_cffi import requests as crequests
+import yfinance as yf
+
+sess = crequests.Session(impersonate="chrome")
+hist = yf.Ticker("SHEL.L", session=sess).history(
+    start="2019-01-01", end="2024-12-31", auto_adjust=True)</code></pre>
+    </div>
+
+    <h3>Reproducing the run</h3>
+    <div class="snippet">
+      <span class="snippet-label">Shell</span>
+      <pre class="codeblock"><code>python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r project/requirements.txt
+cd project &amp;&amp; python main.py    <span class="cmt"># prints the summary table, writes charts/</span></code></pre>
+    </div>
+
+    <div class="callout">
+      <span class="label">Full source</span>
+      Every module, the standalone single-file version (<code>ema_backtest.py</code>), and this
+      website are in the public repository:
+      <a href="https://github.com/AlienatedParanoia/ema-crossover-backtest" target="_blank" rel="noopener">github.com/AlienatedParanoia/ema-crossover-backtest</a>.
+    </div>
+
+    <div class="pager">
+      <a href="conclusion.html">
+        <span class="dir">&larr; Previous</span>
+        Conclusion
+      </a>
+      <span class="spacer"></span>
+      <a href="index.html">
+        <span class="dir">Back to start</span>
+        Abstract
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    EMA Crossover vs Buy-and-Hold &middot; Out-of-sample backtest &middot;
+    <a href="https://github.com/AlienatedParanoia/ema-crossover-backtest" target="_blank" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>
