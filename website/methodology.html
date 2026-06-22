@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Methodology — EMA Crossover Study</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">EMA Crossover Study</a>
+      <a href="index.html" class="nav-link">Abstract</a>
+      <a href="methodology.html" class="nav-link active">Methodology</a>
+      <a href="results.html" class="nav-link">Results</a>
+      <a href="sensitivity.html" class="nav-link">Sensitivity</a>
+      <a href="conclusion.html" class="nav-link">Conclusion</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="pagehead">
+      <p class="eyebrow">Section 3</p>
+      <h1>Methodology</h1>
+    </div>
+
+    <p>The study is implemented as a modular Python pipeline. Each stage — data, signals,
+      backtest, metrics, visualisation, sensitivity — lives in its own module so the logic can
+      be audited independently. This section documents every design decision that affects the
+      reported numbers.</p>
+
+    <h2><span class="section-num">3.1</span>Data &amp; universe</h2>
+    <p>The universe is five large-cap FTSE&nbsp;100 constituents chosen to span different
+      sectors, reducing the chance that any result is driven by a single industry:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Table 3.1 — Study universe.</caption>
+        <thead>
+          <tr><th>Ticker</th><th>Company</th><th>Sector</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>SHEL.L</td><td>Shell</td><td>Energy</td></tr>
+          <tr><td>AZN.L</td><td>AstraZeneca</td><td>Pharmaceuticals</td></tr>
+          <tr><td>HSBA.L</td><td>HSBC</td><td>Banking</td></tr>
+          <tr><td>TSCO.L</td><td>Tesco</td><td>Retail</td></tr>
+          <tr><td>BA.L</td><td>BAE Systems</td><td>Defence</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Daily prices are downloaded from Yahoo Finance for <strong>1&nbsp;January&nbsp;2019 to
+      31&nbsp;December&nbsp;2024</strong>. The pipeline uses <strong>auto-adjusted close</strong>
+      prices rather than raw close. Adjusted close folds in dividends and stock splits, so the
+      return series reflects the actual economic gain a holder receives. Raw close would inject
+      artificial price jumps on ex-dividend dates that would trigger false crossover signals.
+      Missing values (holidays, exchange closures, provider gaps) are forward-filled — carrying
+      the last known price forward, the standard convention for equity series since a position's
+      value is unchanged on a non-trading day — with a back-fill pass to handle any leading gaps.</p>
+
+    <h2><span class="section-num">3.2</span>Train / test split</h2>
+    <p>To prevent the conclusion from being contaminated by hindsight, the data is partitioned
+      on <strong>1&nbsp;July&nbsp;2022</strong>:</p>
+    <ul>
+      <li><strong>Warm-up / in-sample</strong> — Jan&nbsp;2019 → Jun&nbsp;2022 (~70% of the data).
+        Used only to let the moving averages converge before evaluation begins.</li>
+      <li><strong>Out-of-sample test</strong> — Jul&nbsp;2022 → Dec&nbsp;2024 (~30%).
+        All reported performance is measured here.</li>
+    </ul>
+    <p>Crucially, the EMAs are computed over the <em>full</em> price history and only the
+      test-period slice of the resulting signal is traded. This avoids a cold-start artefact: if
+      the EMA were started from scratch on the first test day, its early values would be
+      unreliable and would emit spurious signals at exactly the moment evaluation begins.</p>
+
+    <h2><span class="section-num">3.3</span>The exponential moving average</h2>
+    <p>For a price series <span class="formula" style="display:inline;padding:0.1em 0.4em;"><span class="var">P</span></span>
+      and a window span <span class="var">n</span>, the EMA is computed with the standard
+      recursive formula:</p>
+    <div class="formula">
+      &alpha; = 2 / (<span class="var">n</span> + 1)<br />
+      EMA<sub>t</sub> = &alpha; &middot; <span class="var">P</span><sub>t</sub>
+      + (1 &minus; &alpha;) &middot; EMA<sub>t&minus;1</sub>
+    </div>
+    <p>This is computed with pandas' <code>.ewm(span=n, adjust=False)</code>. The
+      <code>adjust=False</code> choice is deliberate and matters: with <code>adjust=True</code>,
+      pandas computes a batch weighted average over the entire history, which cannot be
+      reproduced in a live system where only the previous EMA value is known. The recursive
+      <code>adjust=False</code> form is exactly how EMAs are computed on Bloomberg, Reuters and
+      most professional trading platforms. Two EMAs are built per stock — a <strong>fast</strong>
+      20-day and a <strong>slow</strong> 50-day line.</p>
+
+    <h2><span class="section-num">3.4</span>Signal generation &amp; look-ahead control</h2>
+    <p>The raw position is long when the fast EMA sits above the slow EMA, and flat otherwise:</p>
+    <div class="formula">
+      raw<sub>t</sub> = +1 if EMA<sub>20,t</sub> &gt; EMA<sub>50,t</sub>, else &minus;1<br />
+      signal<sub>t</sub> = raw<sub>t&minus;1</sub> &nbsp; <span class="muted">(shifted one day forward)</span>
+    </div>
+    <div class="callout">
+      <span class="label">Look-ahead bias prevention</span>
+      A crossover is only <em>observable</em> at the close of day <span class="var">t</span>.
+      The signal series is therefore shifted forward one day (<code>.shift(1)</code>) so that a
+      crossover seen at the close of day <span class="var">t</span> only triggers a trade on day
+      <span class="var">t</span>+1. Without this shift the backtest would implicitly let the
+      trader act on information from the future, inflating returns.
+    </div>
+
+    <h2><span class="section-num">3.5</span>The backtest engine</h2>
+    <p>The portfolio is a simple two-state machine starting from <strong>£10,000</strong>:</p>
+    <ul>
+      <li><strong>Long (signal&nbsp;=&nbsp;+1):</strong> 100% of capital is invested in the
+        stock.</li>
+      <li><strong>Flat (signal&nbsp;=&nbsp;&minus;1):</strong> 100% in cash.</li>
+    </ul>
+    <p>Every change of state — each entry and each exit — incurs a
+      <strong>transaction cost of 0.1%</strong> of the traded value, reflecting broker
+      commission and bid–ask spread. On a buy, the cost is deducted from capital before shares
+      are purchased; on a sell, it is deducted from the proceeds. The daily portfolio value is
+      the share count times the day's price when invested, or the cash balance when flat.</p>
+
+    <h3>Benchmark: buy-and-hold</h3>
+    <p>The benchmark invests the full £10,000 at the first test-period close and never trades
+      again. Following standard academic convention, no transaction cost is applied to this
+      single initial purchase — its cost is negligible over a multi-year horizon. This is a
+      passive baseline representing what an index-style investor would have earned with no
+      active management.</p>
+
+    <h2><span class="section-num">3.6</span>Performance metrics</h2>
+    <p>Three metrics are computed for both the strategy and the benchmark over the test period.</p>
+
+    <h3>Annualised Sharpe ratio</h3>
+    <p>The primary risk-adjusted measure — excess return per unit of volatility, scaled to an
+      annual figure assuming 252 trading days:</p>
+    <div class="formula">
+      <span class="var">r</span><sub>t</sub> = <span class="var">V</span><sub>t</sub> / <span class="var">V</span><sub>t&minus;1</sub> &minus; 1<br />
+      Sharpe = ( mean(<span class="var">r</span><sub>t</sub>) &minus; <span class="var">r</span><sub>f</sub>/252 ) / std(<span class="var">r</span><sub>t</sub>) &times; &radic;252
+    </div>
+    <p>The risk-free rate <span class="var">r</span><sub>f</sub> is set to
+      <strong>2.5%</strong> annualised, a blended average of the 10-year UK Gilt yield across
+      2019–2024.</p>
+
+    <h3>Maximum drawdown</h3>
+    <p>The largest peak-to-trough decline, the primary downside-risk measure for practitioners:</p>
+    <div class="formula">
+      peak<sub>t</sub> = max(<span class="var">V</span><sub>0</sub> &hellip; <span class="var">V</span><sub>t</sub>)<br />
+      MaxDD = min<sub>t</sub> ( (<span class="var">V</span><sub>t</sub> &minus; peak<sub>t</sub>) / peak<sub>t</sub> )
+    </div>
+
+    <h3>Total return</h3>
+    <div class="formula">
+      TotalReturn = (<span class="var">V</span><sub>final</sub> &minus; <span class="var">V</span><sub>initial</sub>) / <span class="var">V</span><sub>initial</sub>
+    </div>
+
+    <h2><span class="section-num">3.7</span>Reproducibility</h2>
+    <p>The entire pipeline is deterministic given the price data. Parameters live in a single
+      configuration module, and the test set is never used for tuning the headline 20/50 run.
+      The sensitivity analysis in Section&nbsp;5 sweeps a grid of fast windows
+      {10,&nbsp;20,&nbsp;50} against slow windows {50,&nbsp;100,&nbsp;200}, skipping any pair
+      where the fast window is not strictly shorter than the slow one.</p>
+
+    <div class="pager">
+      <a href="index.html">
+        <span class="dir">&larr; Previous</span>
+        Abstract
+      </a>
+      <span class="spacer"></span>
+      <a href="results.html">
+        <span class="dir">Next &rarr;</span>
+        Results
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    EMA Crossover vs Buy-and-Hold &middot; Out-of-sample backtest &middot; Built from the
+    <code>project/</code> pipeline.
+  </footer>
+</body>
+</html>

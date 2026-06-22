@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conclusion — EMA Crossover Study</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">EMA Crossover Study</a>
+      <a href="index.html" class="nav-link">Abstract</a>
+      <a href="methodology.html" class="nav-link">Methodology</a>
+      <a href="results.html" class="nav-link">Results</a>
+      <a href="sensitivity.html" class="nav-link">Sensitivity</a>
+      <a href="conclusion.html" class="nav-link active">Conclusion</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="pagehead">
+      <p class="eyebrow">Section 6</p>
+      <h1>Conclusion &amp; limitations</h1>
+    </div>
+
+    <h2><span class="section-num">6.1</span>Findings</h2>
+    <p>The research question was: <em>over a genuinely out-of-sample period, does a 20/50 EMA
+      crossover produce a higher Sharpe ratio and a shallower drawdown than buying and holding,
+      after costs?</em> The evidence answers clearly: <strong>no</strong>.</p>
+    <ul>
+      <li><strong>Risk-adjusted return: buy-and-hold wins 5–0.</strong> The benchmark posted a
+        higher Sharpe ratio on every single stock. Averaged across the universe, the EMA
+        strategy returned a Sharpe of about <strong>&minus;0.03</strong> versus
+        <strong>+0.44</strong> for buy-and-hold — the difference between roughly flat
+        risk-adjusted performance and a respectable one.</li>
+      <li><strong>Absolute return: buy-and-hold wins 5–0.</strong> The gap was often large
+        because the strategy sat in cash through major rallies — HSBC returned +46.5% held but
+        only +5.3% traded, and BAE +36.7% versus +1.4%. On AstraZeneca the rule actively
+        destroyed value, turning a &minus;3.2% hold into a &minus;17.5% loss through repeated
+        whipsaws.</li>
+      <li><strong>Drawdown: a single consolation.</strong> The one place the strategy helped was
+        Tesco's maximum drawdown (&minus;14.1% vs &minus;26.5%), where moving to cash genuinely
+        limited the downside. On the other four stocks it drew down <em>more</em> than simply
+        holding — trading added risk rather than removing it.</li>
+      <li><strong>Hindsight doesn't rescue it.</strong> Even when the best parameter pair is
+        chosen with full knowledge of the test set (Section&nbsp;5), the strategy only edges past
+        buy-and-hold's Sharpe on three of five stocks — and the honest, pre-committed 20/50 rule
+        lost on all five. The edge isn't hiding in a different parameter choice.</li>
+    </ul>
+    <p>The economic intuition is straightforward. A long/flat trend rule is, in effect, a bet
+      that avoiding downtrends outweighs missing the early part of uptrends. Over this
+      particular 2022–2024 window — which contained sharp, V-shaped recoveries — the strategy
+      was repeatedly whipsawed out near local bottoms and bought back in only after much of the
+      rebound had already happened. The transaction costs then compounded the damage. Buying and
+      holding, which is always invested, simply captured more of the upside.</p>
+
+    <h2><span class="section-num">6.2</span>Limitations</h2>
+    <p>The result should be read with the following caveats, in roughly descending order of
+      importance:</p>
+    <ol>
+      <li><strong>Sensitivity "best params" are in-sample to the test set.</strong> The optimal
+        EMA windows reported in Section&nbsp;5 are chosen by Sharpe ratio measured on the test
+        data itself. They describe robustness, not a tradeable edge — a live trader cannot know
+        them in advance. Only the pre-committed 20/50 run is a true out-of-sample result.</li>
+      <li><strong>Small, survivorship-biased universe.</strong> Five large-cap stocks that are
+        still in the index today is a narrow and favourable sample. Companies that were delisted
+        or collapsed are excluded by construction, which flatters any long-biased strategy.</li>
+      <li><strong>Simplified cost &amp; execution model.</strong> Costs are a flat 0.1% per
+        trade with no slippage, no bid–ask modelling, and fills assumed at the close. The
+        benchmark pays no entry cost at all. Real-world frictions would erode the strategy more
+        than the benchmark, since the strategy trades repeatedly.</li>
+      <li><strong>Long/flat only.</strong> The rule never shorts; on a sell signal it sits in
+        cash earning nothing (the risk-free rate is used only in the Sharpe calculation, not
+        credited to idle capital). This understates the opportunity cost of being out of the
+        market.</li>
+      <li><strong>Single regime.</strong> The 2.5-year test window covers one particular market
+        environment. Trend-following rules are regime-dependent — they tend to shine in
+        sustained trends and bleed in choppy, mean-reverting markets — so the conclusion may not
+        generalise to other periods.</li>
+    </ol>
+
+    <h2><span class="section-num">6.3</span>Future work</h2>
+    <ul>
+      <li><strong>Walk-forward validation.</strong> Re-tune parameters on a rolling in-sample
+        window and trade them out-of-sample, so the sensitivity analysis becomes a genuine
+        strategy rather than a hindsight exercise.</li>
+      <li><strong>Broader universe &amp; survivorship correction.</strong> Test across the full
+        FTSE&nbsp;100 (including delisted constituents) to remove sample bias.</li>
+      <li><strong>Risk overlays.</strong> Add volatility-scaled position sizing, stop-losses, or
+        a short leg, and compare against a risk-parity or volatility-target benchmark rather
+        than naive buy-and-hold.</li>
+      <li><strong>Statistical significance.</strong> Bootstrap the return series to attach
+        confidence intervals to the Sharpe differences, distinguishing a real edge from noise.</li>
+    </ul>
+
+    <div class="pager">
+      <a href="sensitivity.html">
+        <span class="dir">&larr; Previous</span>
+        Sensitivity
+      </a>
+      <span class="spacer"></span>
+      <a href="index.html">
+        <span class="dir">Back to start</span>
+        Abstract
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    EMA Crossover vs Buy-and-Hold &middot; Out-of-sample backtest &middot; Built from the
+    <code>project/</code> pipeline.
+  </footer>
+</body>
+</html>

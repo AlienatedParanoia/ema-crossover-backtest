@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EMA Crossover vs Buy-and-Hold — A Backtesting Study</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">EMA Crossover Study</a>
+      <a href="index.html" class="nav-link active">Abstract</a>
+      <a href="methodology.html" class="nav-link">Methodology</a>
+      <a href="results.html" class="nav-link">Results</a>
+      <a href="sensitivity.html" class="nav-link">Sensitivity</a>
+      <a href="conclusion.html" class="nav-link">Conclusion</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="titleblock">
+      <h1>Does a Moving-Average Crossover Beat Buy-and-Hold?</h1>
+      <p class="subtitle">An out-of-sample backtest of the 20/50 EMA crossover strategy
+        on five FTSE&nbsp;100 equities, 2022–2024</p>
+      <p class="byline">A quantitative finance study &middot; Test period <strong>Jul&nbsp;2022 – Dec&nbsp;2024</strong></p>
+    </div>
+
+    <div class="abstract">
+      <h2>Abstract</h2>
+      <p>The exponential-moving-average (EMA) crossover is one of the most widely taught
+        trend-following trading rules: go long when a fast moving average rises above a slow
+        one, and exit when it falls back below. This study tests whether the canonical
+        20-day/50-day EMA crossover delivers superior <em>risk-adjusted</em> returns compared
+        with a passive buy-and-hold benchmark, across five large-cap FTSE&nbsp;100 stocks
+        (Shell, AstraZeneca, HSBC, Tesco and BAE Systems). Daily dividend-adjusted prices from
+        2019–2024 are split into an in-sample warm-up period and a strictly out-of-sample test
+        period (July 2022 onward). The strategy is simulated with realistic 0.1% per-trade
+        transaction costs and a one-day execution lag to eliminate look-ahead bias. Performance
+        is judged on the annualised Sharpe ratio, maximum drawdown and total return, and the
+        result is stress-tested across a grid of EMA parameter pairs. The headline figures
+        below summarise the out-of-sample outcome.</p>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="val">0 / 5</span>
+        <span class="lab">stocks where the EMA strategy beat buy-and-hold on Sharpe ratio</span>
+      </div>
+      <div class="stat">
+        <span class="val">&minus;0.03</span>
+        <span class="lab">average EMA Sharpe ratio (out-of-sample)</span>
+      </div>
+      <div class="stat">
+        <span class="val">+0.44</span>
+        <span class="lab">average buy-and-hold Sharpe ratio</span>
+      </div>
+      <div class="stat">
+        <span class="val">1 / 5</span>
+        <span class="lab">stocks where the EMA strategy had a shallower drawdown</span>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center;font-size:0.9rem;margin-top:-0.6rem;">
+      Headline finding: over this out-of-sample window the 20/50 EMA crossover
+      <strong>underperformed</strong> a passive buy-and-hold on every stock by risk-adjusted
+      return.</p>
+
+    <h2><span class="section-num">1.</span>Aim &amp; research question</h2>
+    <p>The central question is deliberately narrow and falsifiable:</p>
+    <div class="callout">
+      <span class="label">Research question</span>
+      Over a genuinely out-of-sample period, does a 20/50 EMA crossover strategy produce a
+      higher annualised Sharpe ratio — and a shallower maximum drawdown — than simply buying
+      and holding the same stock, after accounting for trading costs?
+    </div>
+    <p>Three sub-objectives follow from this:</p>
+    <ol>
+      <li><strong>Fair measurement.</strong> Build a backtest that is free of look-ahead bias,
+        charges transaction costs on every trade, and evaluates the strategy only on data it
+        was never tuned on.</li>
+      <li><strong>Cross-sectional comparison.</strong> Apply the identical rule to five
+        different sectors (energy, pharma, banking, retail, defence) to see whether any edge is
+        stock-specific or general.</li>
+      <li><strong>Robustness.</strong> Re-run the strategy across a grid of fast/slow EMA
+        windows to check whether the conclusion depends on the specific 20/50 choice.</li>
+    </ol>
+
+    <h2><span class="section-num">2.</span>How to read this paper</h2>
+    <div class="toc">
+      <a href="methodology.html">
+        <span class="toc-num">Section 3</span>
+        <span class="toc-title">Methodology</span>
+        <span class="toc-desc">Data, EMA construction, signal logic, the backtest engine and
+          the performance metrics.</span>
+      </a>
+      <a href="results.html">
+        <span class="toc-num">Section 4</span>
+        <span class="toc-title">Results &amp; comparison</span>
+        <span class="toc-desc">Head-to-head metrics table and per-stock equity-curve and
+          signal charts.</span>
+      </a>
+      <a href="sensitivity.html">
+        <span class="toc-num">Section 5</span>
+        <span class="toc-title">Sensitivity analysis</span>
+        <span class="toc-desc">Sharpe-ratio heatmaps across the EMA parameter grid for each
+          stock.</span>
+      </a>
+      <a href="conclusion.html">
+        <span class="toc-num">Section 6</span>
+        <span class="toc-title">Conclusion &amp; limitations</span>
+        <span class="toc-desc">What the evidence supports, where it falls short, and what to
+          test next.</span>
+      </a>
+    </div>
+
+    <div class="pager">
+      <span class="spacer"></span>
+      <a href="methodology.html">
+        <span class="dir">Next &rarr;</span>
+        Methodology
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    EMA Crossover vs Buy-and-Hold &middot; Out-of-sample backtest &middot; Built from the
+    <code>project/</code> pipeline.
+  </footer>
+</body>
+</html>

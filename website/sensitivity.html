@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sensitivity Analysis — EMA Crossover Study</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">EMA Crossover Study</a>
+      <a href="index.html" class="nav-link">Abstract</a>
+      <a href="methodology.html" class="nav-link">Methodology</a>
+      <a href="results.html" class="nav-link">Results</a>
+      <a href="sensitivity.html" class="nav-link active">Sensitivity</a>
+      <a href="conclusion.html" class="nav-link">Conclusion</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="pagehead">
+      <p class="eyebrow">Section 5</p>
+      <h1>Sensitivity analysis</h1>
+    </div>
+
+    <p>A single good result at 20/50 could be luck. To test robustness, the strategy is re-run
+      for every valid combination of fast EMA window {10,&nbsp;20,&nbsp;50} against slow EMA
+      window {50,&nbsp;100,&nbsp;200} — six valid pairs in total (pairs where the fast window is
+      not strictly shorter than the slow window are excluded). Each cell of the heatmaps below is
+      the annualised Sharpe ratio for that parameter pair, on the same out-of-sample test period;
+      green is strong, red is weak.</p>
+
+    <h2><span class="section-num">5.1</span>Best parameters per stock</h2>
+    <p>For each stock, the parameter pair with the highest test-period Sharpe ratio is shown
+      alongside the canonical 20/50 pair used in the main study. The gap between the two columns
+      is itself informative: a large gap means the 20/50 choice was far from optimal in
+      hindsight.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Table 5.1 — Best EMA window pair by test-period Sharpe ratio, versus the
+          canonical 20/50 pair. Sharpe values read from the parameter grid.</caption>
+        <thead>
+          <tr>
+            <th>Stock</th>
+            <th>Best (short / long)</th>
+            <th>Best Sharpe</th>
+            <th>20 / 50 Sharpe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Shell (SHEL.L)</td><td>50 / 200</td><td class="num-pos">+0.35</td><td class="num-pos">+0.01</td></tr>
+          <tr><td>AstraZeneca (AZN.L)</td><td>10 / 50</td><td class="num-neg">&minus;0.22</td><td class="num-neg">&minus;0.59</td></tr>
+          <tr><td>HSBC (HSBA.L)</td><td>20 / 200</td><td class="num-pos">+0.48</td><td class="num-pos">+0.06</td></tr>
+          <tr><td>Tesco (TSCO.L)</td><td>50 / 200</td><td class="num-pos">+0.90</td><td class="num-pos">+0.36</td></tr>
+          <tr><td>BAE Systems (BA.L)</td><td>10 / 200</td><td class="num-pos">+0.70</td><td class="num-neg">&minus;0.01</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Two patterns stand out. First, no single parameter pair is best across all stocks — the
+      optimum clusters around the slowest windows (50/200 for Shell and Tesco, 20/200 for HSBC,
+      10/200 for BAE) but flips to the fastest pair (10/50) for AstraZeneca. Second, the
+      canonical 20/50 pair is never the best and is often badly sub-optimal: Shell improves from
+      +0.01 to +0.35, HSBC from +0.06 to +0.48, and BAE from &minus;0.01 all the way to +0.70
+      once slower windows are used. A rule whose Sharpe ratio swings this much with its
+      parameters is sensitive, not robust — and the fact that the optimum almost always lies at
+      the edge of the tested grid (the slowest available lines) hints that the trend signal adds
+      little beyond simply staying invested.</p>
+
+    <div class="callout">
+      <span class="label">Important caveat</span>
+      The "best" parameters in the table above are selected by their Sharpe ratio
+      <em>on the test set itself</em>. Reading these as an out-of-sample result would be a form
+      of hindsight bias — in a live setting the parameters must be fixed in advance. They are
+      reported here only to characterise how sensitive the strategy is to its window choice, not
+      as a tradeable recommendation. The headline 20/50 run on the Results page is the genuine
+      out-of-sample figure. See the <a href="conclusion.html">limitations</a> for more.
+    </div>
+
+    <h2><span class="section-num">5.2</span>Parameter heatmaps</h2>
+    <p>Rows are the short (fast) EMA window; columns are the long (slow) EMA window. Cells for
+      invalid combinations are left blank.</p>
+
+    <figure>
+      <img src="assets/charts/SHEL.L_sensitivity_heatmap.png" alt="Shell sensitivity heatmap" />
+      <figcaption><span class="figlabel">Figure 5.1.</span> Shell (SHEL.L) — Sharpe ratio across the EMA parameter grid.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/charts/AZN.L_sensitivity_heatmap.png" alt="AstraZeneca sensitivity heatmap" />
+      <figcaption><span class="figlabel">Figure 5.2.</span> AstraZeneca (AZN.L) — Sharpe ratio across the EMA parameter grid.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/charts/HSBA.L_sensitivity_heatmap.png" alt="HSBC sensitivity heatmap" />
+      <figcaption><span class="figlabel">Figure 5.3.</span> HSBC (HSBA.L) — Sharpe ratio across the EMA parameter grid.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/charts/TSCO.L_sensitivity_heatmap.png" alt="Tesco sensitivity heatmap" />
+      <figcaption><span class="figlabel">Figure 5.4.</span> Tesco (TSCO.L) — Sharpe ratio across the EMA parameter grid.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/charts/BA.L_sensitivity_heatmap.png" alt="BAE Systems sensitivity heatmap" />
+      <figcaption><span class="figlabel">Figure 5.5.</span> BAE Systems (BA.L) — Sharpe ratio across the EMA parameter grid.</figcaption>
+    </figure>
+
+    <div class="pager">
+      <a href="results.html">
+        <span class="dir">&larr; Previous</span>
+        Results
+      </a>
+      <span class="spacer"></span>
+      <a href="conclusion.html">
+        <span class="dir">Next &rarr;</span>
+        Conclusion
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    EMA Crossover vs Buy-and-Hold &middot; Out-of-sample backtest &middot; Built from the
+    <code>project/</code> pipeline.
+  </footer>
+</body>
+</html>
